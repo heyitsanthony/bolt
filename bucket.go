@@ -53,9 +53,12 @@ type bucket struct {
 
 // newBucket returns a new bucket associated with a transaction.
 func newBucket(tx *Tx) Bucket {
-	var b = Bucket{tx: tx, FillPercent: DefaultFillPercent}
+	b := Bucket{
+		tx:          tx,
+		buckets:     make(map[string]*Bucket),
+		FillPercent: DefaultFillPercent,
+	}
 	if tx.writable {
-		b.buckets = make(map[string]*Bucket)
 		b.nodes = make(map[pgid]*node)
 	}
 	return b
@@ -94,10 +97,9 @@ func (b *Bucket) Cursor() *Cursor {
 // Returns nil if the bucket does not exist.
 // The bucket instance is only valid for the lifetime of the transaction.
 func (b *Bucket) Bucket(name []byte) *Bucket {
-	if b.buckets != nil {
-		if child := b.buckets[string(name)]; child != nil {
-			return child
-		}
+	n := string(name)
+	if child := b.buckets[n]; child != nil {
+		return child
 	}
 
 	// Move cursor to key.
@@ -110,11 +112,8 @@ func (b *Bucket) Bucket(name []byte) *Bucket {
 	}
 
 	// Otherwise create a bucket and cache it.
-	var child = b.openBucket(v)
-	if b.buckets != nil {
-		b.buckets[string(name)] = child
-	}
-
+	child := b.openBucket(v)
+	b.buckets[n] = child
 	return child
 }
 
