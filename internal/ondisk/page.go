@@ -35,8 +35,8 @@ type page struct {
 	ptr      uintptr
 }
 
-// typ returns a human readable page type string used for debugging.
-func (p *page) typ() string {
+// Type returns a human readable page type string used for debugging.
+func (p *page) Type() string {
 	if (p.flags & branchPageFlag) != 0 {
 		return "branch"
 	} else if (p.flags & leafPageFlag) != 0 {

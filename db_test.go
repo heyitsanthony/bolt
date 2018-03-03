@@ -29,19 +29,6 @@ const pageSize = 4096
 // pageHeaderSize is the size of a page header.
 const pageHeaderSize = 16
 
-// meta represents a simplified version of a database meta page for testing.
-type meta struct {
-	magic    uint32
-	version  uint32
-	_        uint32
-	_        uint32
-	_        [16]byte
-	_        uint64
-	pgid     uint64
-	_        uint64
-	checksum uint64
-}
-
 // Ensure that a database can be opened without error.
 func TestOpen(t *testing.T) {
 	path := tempfile()
