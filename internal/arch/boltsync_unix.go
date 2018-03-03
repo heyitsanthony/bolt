@@ -1,10 +1,8 @@
-package bolt
+// +build !windows,!plan9,!linux,!openbsd
 
-import (
-	"syscall"
-)
+package core
 
 // fdatasync flushes written data to a file descriptor.
 func fdatasync(db *DB) error {
-	return syscall.Fdatasync(int(db.file.Fd()))
+	return db.file.Sync()
 }

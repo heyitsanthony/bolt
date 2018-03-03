@@ -1804,7 +1804,7 @@ func ReadPageSize(path string) (int, error) {
 	}
 
 	// Read page size from metadata.
-	m := (*meta)(unsafe.Pointer(&buf[PageHeaderSize]))
+	m := (*ondisk.Meta)(unsafe.Pointer(&buf[PageHeaderSize]))
 	return int(m.pageSize), nil
 }
 
@@ -1840,92 +1840,6 @@ type pgid uint64
 
 // DO NOT EDIT. Copied from the "bolt" package.
 type txid uint64
-
-// DO NOT EDIT. Copied from the "bolt" package.
-type meta struct {
-	magic    uint32
-	version  uint32
-	pageSize uint32
-	flags    uint32
-	root     bucket
-	freelist pgid
-	pgid     pgid
-	txid     txid
-	checksum uint64
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-type bucket struct {
-	root     pgid
-	sequence uint64
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-type page struct {
-	id       pgid
-	flags    uint16
-	count    uint16
-	overflow uint32
-	ptr      uintptr
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-func (p *page) Type() string {
-	if (p.flags & branchPageFlag) != 0 {
-		return "branch"
-	} else if (p.flags & leafPageFlag) != 0 {
-		return "leaf"
-	} else if (p.flags & metaPageFlag) != 0 {
-		return "meta"
-	} else if (p.flags & freelistPageFlag) != 0 {
-		return "freelist"
-	}
-	return fmt.Sprintf("unknown<%02x>", p.flags)
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-func (p *page) leafPageElement(index uint16) *leafPageElement {
-	n := &((*[0x7FFFFFF]leafPageElement)(unsafe.Pointer(&p.ptr)))[index]
-	return n
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-func (p *page) branchPageElement(index uint16) *branchPageElement {
-	return &((*[0x7FFFFFF]branchPageElement)(unsafe.Pointer(&p.ptr)))[index]
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-type branchPageElement struct {
-	pos   uint32
-	ksize uint32
-	pgid  pgid
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-func (n *branchPageElement) key() []byte {
-	buf := (*[maxAllocSize]byte)(unsafe.Pointer(n))
-	return buf[n.pos : n.pos+n.ksize]
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-type leafPageElement struct {
-	flags uint32
-	pos   uint32
-	ksize uint32
-	vsize uint32
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-func (n *leafPageElement) key() []byte {
-	buf := (*[maxAllocSize]byte)(unsafe.Pointer(n))
-	return buf[n.pos : n.pos+n.ksize]
-}
-
-// DO NOT EDIT. Copied from the "bolt" package.
-func (n *leafPageElement) value() []byte {
-	buf := (*[maxAllocSize]byte)(unsafe.Pointer(n))
-	return buf[n.pos+n.ksize : n.pos+n.ksize+n.vsize]
-}
 
 // CompactCommand represents the "compact" command execution.
 type CompactCommand struct {
