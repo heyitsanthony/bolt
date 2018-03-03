@@ -302,13 +302,6 @@ func (tx *Tx) close() {
 	tx.pages = nil
 }
 
-// Copy writes the entire database to a writer.
-// This function exists for backwards compatibility. Use WriteTo() instead.
-func (tx *Tx) Copy(w io.Writer) error {
-	_, err := tx.WriteTo(w)
-	return err
-}
-
 // WriteTo writes the entire database to a writer.
 // If err == nil then exactly tx.Size() bytes will be written into the writer.
 func (tx *Tx) WriteTo(w io.Writer) (n int64, err error) {
@@ -361,23 +354,6 @@ func (tx *Tx) WriteTo(w io.Writer) (n int64, err error) {
 	}
 
 	return n, nil
-}
-
-// CopyFile copies the entire database to file at the given path.
-// A reader transaction is maintained during the copy so it is safe to continue
-// using the database while a copy is in progress.
-func (tx *Tx) CopyFile(path string, mode os.FileMode) error {
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Copy(f)
-	if err != nil {
-		_ = f.Close()
-		return err
-	}
-	return f.Close()
 }
 
 // Check performs several consistency checks on the database for this transaction.

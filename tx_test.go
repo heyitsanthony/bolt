@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"testing"
@@ -548,7 +549,7 @@ func TestTx_CopyFile(t *testing.T) {
 	}
 
 	if err := db.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(path, 0600)
+		return copyTx(tx, path)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -596,8 +597,8 @@ func (f *failWriter) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
-// Ensure that Copy handles write errors right.
-func TestTx_CopyFile_Error_Meta(t *testing.T) {
+// Ensure that WriteTo handles write errors right.
+func TestTx_WriteTo_Error_Meta(t *testing.T) {
 	db := MustOpenDB()
 	defer db.MustClose()
 	if err := db.Update(func(tx *bolt.Tx) error {
@@ -617,14 +618,15 @@ func TestTx_CopyFile_Error_Meta(t *testing.T) {
 	}
 
 	if err := db.View(func(tx *bolt.Tx) error {
-		return tx.Copy(&failWriter{})
+		_, err := tx.WriteTo(&failWriter{})
+		return err
 	}); err == nil || err.Error() != "meta 0 copy: error injected for tests" {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-// Ensure that Copy handles write errors right.
-func TestTx_CopyFile_Error_Normal(t *testing.T) {
+// Ensure that WriteTo handles write errors right.
+func TestTx_WriteTo_Error_Normal(t *testing.T) {
 	db := MustOpenDB()
 	defer db.MustClose()
 	if err := db.Update(func(tx *bolt.Tx) error {
@@ -644,7 +646,8 @@ func TestTx_CopyFile_Error_Normal(t *testing.T) {
 	}
 
 	if err := db.View(func(tx *bolt.Tx) error {
-		return tx.Copy(&failWriter{3 * db.Info().PageSize})
+		_, err := tx.WriteTo(&failWriter{3 * db.Info().PageSize})
+		return err
 	}); err == nil || err.Error() != "error injected for tests" {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -809,7 +812,7 @@ func ExampleTx_Rollback() {
 	// The value for 'foo' is still: bar
 }
 
-func ExampleTx_CopyFile() {
+func ExampleTx_WriteTo() {
 	// Open the database.
 	db, err := bolt.Open(tempfile(), 0666, nil)
 	if err != nil {
@@ -832,9 +835,15 @@ func ExampleTx_CopyFile() {
 	}
 
 	// Copy the database to another file.
-	toFile := tempfile()
+	f, err := ioutil.TempFile("", "boltexample")
+	if err != nil {
+		log.Fatal(err)
+	}
+	toFile := f.Name()
 	if err := db.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(toFile, 0666)
+		defer f.Close()
+		_, err := tx.WriteTo(f)
+		return err
 	}); err != nil {
 		log.Fatal(err)
 	}

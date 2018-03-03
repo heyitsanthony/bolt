@@ -1644,11 +1644,10 @@ func (db *DB) MustCheck() {
 
 		// If errors occurred, copy the DB and print the errors.
 		if len(errors) > 0 {
-			var path = tempfile()
-			if err := tx.CopyFile(path, 0600); err != nil {
+			path := tempfile()
+			if err := copyTx(tx, path); err != nil {
 				panic(err)
 			}
-
 			// Print errors.
 			fmt.Print("\n\n")
 			fmt.Printf("consistency check failed (%d errors)\n", len(errors))
@@ -1672,7 +1671,7 @@ func (db *DB) MustCheck() {
 func (db *DB) CopyTempFile() {
 	path := tempfile()
 	if err := db.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(path, 0600)
+		return copyTx(tx, path)
 	}); err != nil {
 		panic(err)
 	}
@@ -1718,4 +1717,16 @@ func u64tob(v uint64) []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, v)
 	return b
+}
+
+func copyTx(tx *bolt.Tx, path string) error {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	if _, err = tx.WriteTo(f); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
 }
